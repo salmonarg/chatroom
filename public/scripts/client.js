@@ -649,7 +649,7 @@ function addMessage(sender, text, type, timestamp = Date.now(), msgId = null, me
     if (sender === currentUser) {
         senderSpan.style.color = "var(--my-nom-color)";
 
-    } else if (sender === "system" || sender === "caffeine" || sender === "console") {
+    } else if (sender === "system" || sender === "caffeine" || sender === "console" || sender === "newsbot") {
         senderSpan.style.color = "var(--admin-nom-color)";
     } else if (sender === "EnderDragon") {
         senderSpan.style.color = "var(--dragon-nom-color)";
