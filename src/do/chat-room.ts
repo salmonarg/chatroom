@@ -5,13 +5,11 @@ import { Bindings, Message } from '../types'
 export class ChatRoom extends DurableObject {
     state: any
     env: Bindings
-    sessions: any[]
 
     constructor(state: any, env: Bindings) {
         super(state, env)
         this.state = state
         this.env = env
-        this.sessions = []
     }
 
     async fetch(request: Request) {
@@ -20,13 +18,14 @@ export class ChatRoom extends DurableObject {
         // handle internal user list requests
         if (url.pathname === "/users") {
             const uniqueUsers = new Map()   
-            this.sessions.forEach(session => {
-                if (session.readyState === WebSocket.READY_STATE_OPEN && session.userData) {
-                    if (!uniqueUsers.has(session.userData.uid)) {
-                        uniqueUsers.set(session.userData.uid, {
-                            username: session.userData.username,
-                            uid: session.userData.uid,
-                            role: session.userData.role
+            this.state.getWebSockets().forEach((session: any) => {
+                const userData = session.deserializeAttachment()
+                if (userData) {
+                    if (!uniqueUsers.has(userData.uid)) {
+                        uniqueUsers.set(userData.uid, {
+                            username: userData.username,
+                            uid: userData.uid,
+                            role: userData.role
                         })
                     }
                 }
@@ -90,323 +89,328 @@ export class ChatRoom extends DurableObject {
     }
 
     async handleSession(socket: any, username: any, role: any, uid: any, roomName: any) {
-        socket.accept()
-        socket.userData = { username, role, uid, roomName }
-        this.sessions.push(socket)
+        this.state.acceptWebSocket(socket)
+        socket.serializeAttachment({ username, role, uid, roomName })
         await this.pushRecentHistory(socket)
-        socket.addEventListener("message", async (msg: any) => {
-            const data = msg.data
+    }
 
-            if (data.startsWith("/")) {
-                console.log(`Received command from ${socket.userData.username}: ${data}`)
-                const args = data.split(" ")
-                const command = args[0]
+    async webSocketMessage(ws: any, msg: string | ArrayBuffer) {
+        const userData = ws.deserializeAttachment()
+        if (!userData) return
 
-                if (command === "/clear") {
-                    if (socket.userData.role !== 'admin') {
-                            socket.send(JSON.stringify({
-                                sender_username: "system",
-                                text: "permission denied.",
-                                timestamp: Date.now()
-                            }))
-                            return
-                    }
+        const data = typeof msg === "string" ? msg : new TextDecoder().decode(msg)
 
-                    const list = await this.state.storage.list({ prefix: "msg-" })
-                    const keys = Array.from(list.keys())
-                    if (keys.length > 0) {
-                        await this.state.storage.delete(keys)
-                    }
-            
-                    const clearMsg = {
-                        msg_id: this.generateMsgId(),
-                        sender_username: "system",
-                        sender_uid: "00001",
-                        text: `chat history cleared by ${socket.userData.username}(${socket.userData.uid}).`,
-                        timestamp: Date.now(),
-                        channel: roomName
-                    }
-                    const clearMsgStr = JSON.stringify(clearMsg)
-                    this.broadcast(clearMsgStr)
-                    this.saveMessage(clearMsg)
-                    return 
-                }
+        if (data.startsWith("/")) {
+            console.log(`Received command from ${userData.username}: ${data}`)
+            const args = data.split(" ")
+            const command = args[0]
 
-                if (command === "/wipe") {
-                    if (socket.userData.role !== 'admin') {
-                            socket.send(JSON.stringify({
-                                sender_username: "system",
-                                text: "permission denied.",
-                                timestamp: Date.now()
-                            }))
-                            return
-                    }
-
-                    const targetMsgId = args[1]
-                    if (!targetMsgId || !targetMsgId.startsWith("msg-")) {
-                        socket.send(JSON.stringify({
-                            sender_username: "system",
-                            text: "usage: /wipe <msg-id>",
-                            timestamp: Date.now()
-                        }))
-                        return
-                    }
-
-                    await this.state.storage.delete(targetMsgId)
-
-                    const wipeMsg = {
-                        sender_username: "system",
-                        sender_uid: "00001",
-                        channel: roomName,
-                        text: `message ${targetMsgId} wiped by ${socket.userData.username}.`,
-                        timestamp: Date.now()
-                    }
-
-                    socket.send(JSON.stringify(wipeMsg))
-                    return
-                }
-
-                if (command === "/del") {
-                    const targetMsgId = args[1]
-                    if (!targetMsgId || !targetMsgId.startsWith("msg-")) {
-                         socket.send(JSON.stringify({
-                            sender_username: "system",
-                            text: "usage: /del <msg-id>",
-                            timestamp: Date.now()
-                        }))
-                        return
-                    }
-
-                    const msg: any = await this.state.storage.get(targetMsgId)
-                    if (!msg) {
-                         socket.send(JSON.stringify({
-                            sender_username: "system",
-                            text: "message not found.",
-                            timestamp: Date.now()
-                        }))
-                        return
-                    }
-
-                    if (msg.sender_uid !== socket.userData.uid) {
-                         socket.send(JSON.stringify({
-                            sender_username: "system",
-                            text: "permission denied. you can only delete your own messages.",
-                            timestamp: Date.now()
-                        }))
-                        return
-                    }
-
-                    const originalText = msg.text
-                    const originalTime = msg.timestamp
-
-                    msg.text = "<deleted>"
-                    msg.is_deleted = true
-                    await this.state.storage.put(targetMsgId, msg)
-
-                    const delNotify = {
-                        sender_username: "system",
-                        sender_uid: "00001",
-                        channel: roomName,
-                        text: `message ${targetMsgId} (${originalText}) from ${new Date(originalTime).toISOString()} was deleted.`,
-                        timestamp: Date.now()
-                    }
-                    
-                    const notifyStr = JSON.stringify(delNotify)
-                    socket.send(notifyStr)
-                    
-                    this.broadcast(JSON.stringify(msg))
-                    return
-                }
-
-                if (command === "/censor") {
-                    if (socket.userData.role !== 'admin') {
-                         socket.send(JSON.stringify({
+            if (command === "/clear") {
+                if (userData.role !== 'admin') {
+                        ws.send(JSON.stringify({
                             sender_username: "system",
                             text: "permission denied.",
                             timestamp: Date.now()
                         }))
                         return
-                    }
-
-                    const targetMsgId = args[1]
-                    const reason = args.slice(2).join(" ")
-
-                    if (!targetMsgId || !targetMsgId.startsWith("msg-")) {
-                         socket.send(JSON.stringify({
-                            sender_username: "system",
-                            text: "usage: /censor <msg-id> <reason>",
-                            timestamp: Date.now()
-                        }))
-                        return
-                    }
-
-                    const msg: any = await this.state.storage.get(targetMsgId)
-                    if (!msg) {
-                         socket.send(JSON.stringify({
-                            sender_username: "system",
-                            text: "message not found.",
-                            timestamp: Date.now()
-                        }))
-                        return
-                    }
-
-                    const censorText = reason 
-                        ? `<censored by ${socket.userData.username}: ${reason}>` 
-                        : `<censored by ${socket.userData.username}>`
-                    
-                    const originalText = msg.text
-                    msg.text = censorText
-                    msg.is_censored = true
-
-                    await this.state.storage.put(targetMsgId, msg)
-
-                    const censorNotify = {
-                        sender_username: "system",
-                        sender_uid: "00001",
-                        channel: roomName,
-                        text: `message ${targetMsgId} (${originalText}) was censored by ${socket.userData.username}.`,
-                        timestamp: Date.now()
-                    }
-                    
-                    const notifyStr = JSON.stringify(censorNotify)
-                    socket.send(notifyStr)
-
-                    this.broadcast(JSON.stringify(msg))
-                    return
                 }
 
-                if (command === "/insert") {
-                    if (socket.userData.role !== 'admin') {
-                         socket.send(JSON.stringify({
+                const list = await this.state.storage.list({ prefix: "msg-" })
+                const keys = Array.from(list.keys())
+                if (keys.length > 0) {
+                    await this.state.storage.delete(keys)
+                }
+        
+                const clearMsg = {
+                    msg_id: this.generateMsgId(),
+                    sender_username: "system",
+                    sender_uid: "00001",
+                    text: `chat history cleared by ${userData.username}(${userData.uid}).`,
+                    timestamp: Date.now(),
+                    channel: userData.roomName
+                }
+                const clearMsgStr = JSON.stringify(clearMsg)
+                this.broadcast(clearMsgStr)
+                this.saveMessage(clearMsg)
+                return 
+            }
+
+            if (command === "/wipe") {
+                if (userData.role !== 'admin') {
+                        ws.send(JSON.stringify({
                             sender_username: "system",
                             text: "permission denied.",
                             timestamp: Date.now()
                         }))
                         return
-                    }
-
-                    const targetTimestamp = parseInt(args[1])
-                    const text = args.slice(2).join(" ")
-
-                    if (isNaN(targetTimestamp) || !text) {
-                         socket.send(JSON.stringify({
-                            sender_username: "system",
-                            text: "usage: /insert <timestamp> <text>",
-                            timestamp: Date.now()
-                        }))
-                        return
-                    }
-
-                    const msgId = this.generateMsgId(targetTimestamp)
-                    const msg = {
-                        msg_id: msgId,
-                        sender_username: socket.userData.username,
-                        sender_uid: socket.userData.uid,
-                        channel: roomName,
-                        timestamp: targetTimestamp,
-                        text: text
-                    }
-
-                    await this.saveMessage(msg)
-                    this.broadcast(JSON.stringify(msg))
-                    return
                 }
 
-                if (command === "/help") {
-                    let helpText = "Commands:<br>"
-                    helpText += "/del <msg-id> (soft delete your own message)<br>"
-                    helpText += "/save (save chat history in this room)<br>"
-                    helpText += "<br>Typeset:<br>"
-                    helpText += "&lt;br&gt; (line break)<br>"
-                    helpText += "&lt;b&gt;text&lt;/b&gt; (bold text)<br>"
-                    helpText += "&lt;a href=\"url\"&gt;text&lt;/a&gt; (link)<br>"
-
-                    if (socket.userData.role === 'admin') {
-                        helpText += "<br>Admin Commands:<br>"
-                        helpText += "/clear (clear all messages in this room)<br>"
-                        helpText += "/wipe <msg-id> (permanently remove a message)<br>"
-                        helpText += "/censor <msg-id> <reason> (censor a message with optional reason)<br>"
-                        helpText += "/insert <timestamp> <text> (insert a message at specific time)<br>"
-                    }
-
-                    socket.send(JSON.stringify({
+                const targetMsgId = args[1]
+                if (!targetMsgId || !targetMsgId.startsWith("msg-")) {
+                    ws.send(JSON.stringify({
                         sender_username: "system",
-                        text: helpText,
+                        text: "usage: /wipe <msg-id>",
                         timestamp: Date.now()
                     }))
                     return
                 }
 
-                socket.send(JSON.stringify({
-                    sender: "system",
-                    text: `unknown command: ${command}`,
+                await this.state.storage.delete(targetMsgId)
+
+                const wipeMsg = {
+                    sender_username: "system",
+                    sender_uid: "00001",
+                    channel: userData.roomName,
+                    text: `message ${targetMsgId} wiped by ${userData.username}.`,
+                    timestamp: Date.now()
+                }
+
+                ws.send(JSON.stringify(wipeMsg))
+                return
+            }
+
+            if (command === "/del") {
+                const targetMsgId = args[1]
+                if (!targetMsgId || !targetMsgId.startsWith("msg-")) {
+                     ws.send(JSON.stringify({
+                        sender_username: "system",
+                        text: "usage: /del <msg-id>",
+                        timestamp: Date.now()
+                    }))
+                    return
+                }
+
+                const msgRecord: any = await this.state.storage.get(targetMsgId)
+                if (!msgRecord) {
+                     ws.send(JSON.stringify({
+                        sender_username: "system",
+                        text: "message not found.",
+                        timestamp: Date.now()
+                    }))
+                    return
+                }
+
+                if (msgRecord.sender_uid !== userData.uid) {
+                     ws.send(JSON.stringify({
+                        sender_username: "system",
+                        text: "permission denied. you can only delete your own messages.",
+                        timestamp: Date.now()
+                    }))
+                    return
+                }
+
+                const originalText = msgRecord.text
+                const originalTime = msgRecord.timestamp
+
+                msgRecord.text = "<deleted>"
+                msgRecord.is_deleted = true
+                await this.state.storage.put(targetMsgId, msgRecord)
+
+                const delNotify = {
+                    sender_username: "system",
+                    sender_uid: "00001",
+                    channel: userData.roomName,
+                    text: `message ${targetMsgId} (${originalText}) from ${new Date(originalTime).toISOString()} was deleted.`,
+                    timestamp: Date.now()
+                }
+                
+                const notifyStr = JSON.stringify(delNotify)
+                ws.send(notifyStr)
+                
+                this.broadcast(JSON.stringify(msgRecord))
+                return
+            }
+
+            if (command === "/censor") {
+                if (userData.role !== 'admin') {
+                     ws.send(JSON.stringify({
+                        sender_username: "system",
+                        text: "permission denied.",
+                        timestamp: Date.now()
+                    }))
+                    return
+                }
+
+                const targetMsgId = args[1]
+                const reason = args.slice(2).join(" ")
+
+                if (!targetMsgId || !targetMsgId.startsWith("msg-")) {
+                     ws.send(JSON.stringify({
+                        sender_username: "system",
+                        text: "usage: /censor <msg-id> <reason>",
+                        timestamp: Date.now()
+                    }))
+                    return
+                }
+
+                const msgRecord: any = await this.state.storage.get(targetMsgId)
+                if (!msgRecord) {
+                     ws.send(JSON.stringify({
+                        sender_username: "system",
+                        text: "message not found.",
+                        timestamp: Date.now()
+                    }))
+                    return
+                }
+
+                const censorText = reason 
+                    ? `<censored by ${userData.username}: ${reason}>` 
+                    : `<censored by ${userData.username}>`
+                
+                const originalText = msgRecord.text
+                msgRecord.text = censorText
+                msgRecord.is_censored = true
+
+                await this.state.storage.put(targetMsgId, msgRecord)
+
+                const censorNotify = {
+                    sender_username: "system",
+                    sender_uid: "00001",
+                    channel: userData.roomName,
+                    text: `message ${targetMsgId} (${originalText}) was censored by ${userData.username}.`,
+                    timestamp: Date.now()
+                }
+                
+                const notifyStr = JSON.stringify(censorNotify)
+                ws.send(notifyStr)
+
+                this.broadcast(JSON.stringify(msgRecord))
+                return
+            }
+
+            if (command === "/insert") {
+                if (userData.role !== 'admin') {
+                     ws.send(JSON.stringify({
+                        sender_username: "system",
+                        text: "permission denied.",
+                        timestamp: Date.now()
+                    }))
+                    return
+                }
+
+                const targetTimestamp = parseInt(args[1])
+                const text = args.slice(2).join(" ")
+
+                if (isNaN(targetTimestamp) || !text) {
+                     ws.send(JSON.stringify({
+                        sender_username: "system",
+                        text: "usage: /insert <timestamp> <text>",
+                        timestamp: Date.now()
+                    }))
+                    return
+                }
+
+                const msgId = this.generateMsgId(targetTimestamp)
+                const msgRecord = {
+                    msg_id: msgId,
+                    sender_username: userData.username,
+                    sender_uid: userData.uid,
+                    channel: userData.roomName,
+                    timestamp: targetTimestamp,
+                    text: text
+                }
+
+                await this.saveMessage(msgRecord)
+                this.broadcast(JSON.stringify(msgRecord))
+                return
+            }
+
+            if (command === "/help") {
+                let helpText = "Commands:<br>"
+                helpText += "/del <msg-id> (soft delete your own message)<br>"
+                helpText += "/save (save chat history in this room)<br>"
+                helpText += "<br>Typeset:<br>"
+                helpText += "&lt;br&gt; (line break)<br>"
+                helpText += "&lt;b&gt;text&lt;/b&gt; (bold text)<br>"
+                helpText += "&lt;a href=\"url\"&gt;text&lt;/a&gt; (link)<br>"
+
+                if (userData.role === 'admin') {
+                    helpText += "<br>Admin Commands:<br>"
+                    helpText += "/clear (clear all messages in this room)<br>"
+                    helpText += "/wipe <msg-id> (permanently remove a message)<br>"
+                    helpText += "/censor <msg-id> <reason> (censor a message with optional reason)<br>"
+                    helpText += "/insert <timestamp> <text> (insert a message at specific time)<br>"
+                }
+
+                ws.send(JSON.stringify({
+                    sender_username: "system",
+                    text: helpText,
                     timestamp: Date.now()
                 }))
                 return
             }
-      
-            const timestamp = Date.now()
-            const msgId = this.generateMsgId(timestamp)
 
-            const messageObj: Message = {
-                msg_id: msgId,
-                sender_username: socket.userData.username,
-                sender_uid: socket.userData.uid,
-                channel: roomName,
-                timestamp: timestamp,
-                text: data
-            }
-      
-            const messageString = JSON.stringify(messageObj)
-
-            await this.saveMessage(messageObj)
-            this.broadcast(messageString)
-
-            // bridge logic: forward to minecraft server via http bridge
-            if (roomName === "minecraft" && socket.userData.username !== "console" && this.env.BRIDGE_URL) {
-                let nameColor: string;
-                switch (socket.userData.username) {
-                    case "EnderDragon":
-                        nameColor = "dark_purple";
-                        break;
-                    case "Cloudrayyy":
-                        nameColor = "green";
-                        break;
-                    default:
-                        nameColor = "aqua";
-                }
-                // escape backslashes and double quotes
-                const safeText = data.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-                
-                const tellraw = `/tellraw @a [{"text": "<", "color": "white"}, {"text": "${socket.userData.username}", "color": "${nameColor}"}, {"text": "> ", "color": "white"}, {"text": "${safeText}", "color": "white"}]`
-
-                // fetch and notify on success
-                fetch(this.env.BRIDGE_URL, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${this.env.BRIDGE_TOKEN}`
-                    },
-                    body: JSON.stringify({ command: tellraw })
-                }).then(async res => {
-                    if (res.ok) {
-                        this.broadcast(JSON.stringify({
-                            type: "bridge_status",
-                            status: "success",
-                            msg_id: msgId
-                        }))
-                        messageObj.is_bridged = true
-                        await this.saveMessage(messageObj)
-                    }
-                }).catch(err => console.error("Bridge Error:", (err as Error).message))
-            }
-        })
-
-        const closeHandler = () => {
-            this.sessions = this.sessions.filter(s => s !== socket)
+            ws.send(JSON.stringify({
+                sender: "system",
+                text: `unknown command: ${command}`,
+                timestamp: Date.now()
+            }))
+            return
         }
-        socket.addEventListener("close", closeHandler)
-        socket.addEventListener("error", closeHandler)
+  
+        const timestamp = Date.now()
+        const msgId = this.generateMsgId(timestamp)
+
+        const messageObj: Message = {
+            msg_id: msgId,
+            sender_username: userData.username,
+            sender_uid: userData.uid,
+            channel: userData.roomName,
+            timestamp: timestamp,
+            text: data
+        }
+  
+        const messageString = JSON.stringify(messageObj)
+
+        await this.saveMessage(messageObj)
+        this.broadcast(messageString)
+
+        // bridge logic: forward to minecraft server via http bridge
+        if (userData.roomName === "minecraft" && userData.username !== "console" && this.env.BRIDGE_URL) {
+            let nameColor: string;
+            switch (userData.username) {
+                case "EnderDragon":
+                    nameColor = "dark_purple";
+                    break;
+                case "Cloudrayyy":
+                    nameColor = "green";
+                    break;
+                default:
+                    nameColor = "aqua";
+            }
+            // escape backslashes and double quotes
+            const safeText = data.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+            
+            const tellraw = `/tellraw @a [{"text": "<", "color": "white"}, {"text": "${userData.username}", "color": "${nameColor}"}, {"text": "> ", "color": "white"}, {"text": "${safeText}", "color": "white"}]`
+
+            // fetch and notify on success
+            fetch(this.env.BRIDGE_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${this.env.BRIDGE_TOKEN}`
+                },
+                body: JSON.stringify({ command: tellraw })
+            }).then(async res => {
+                if (res.ok) {
+                    this.broadcast(JSON.stringify({
+                        type: "bridge_status",
+                        status: "success",
+                        msg_id: msgId
+                    }))
+                    messageObj.is_bridged = true
+                    await this.saveMessage(messageObj)
+                }
+            }).catch(err => console.error("Bridge Error:", (err as Error).message))
+        }
+    }
+
+    async webSocketClose(ws: any, code: number, reason: string, wasClean: boolean) {
+        // Handle cleanup if needed, DO handles removal automatically
+    }
+
+    async webSocketError(ws: any, error: any) {
+        // Handle error if needed, DO handles removal automatically
     }
 
     generateMsgId(timestamp = Date.now()) {
@@ -509,13 +513,11 @@ export class ChatRoom extends DurableObject {
     }
 
     broadcast(message: string) {
-        this.sessions.forEach(session => {
-            if (session.readyState === WebSocket.READY_STATE_OPEN) {
-                try {
-                    session.send(message)
-                } catch (err) {
-                    session.close()
-                }
+        this.state.getWebSockets().forEach((session: any) => {
+            try {
+                session.send(message)
+            } catch (err) {
+                // connection errors handled implicitly
             }
         })
     }
