@@ -1,6 +1,6 @@
 ## API 文档
 
-© 2026 caffeine-Ink
+© 2026 Caffeine Ink
 
 适用版本: coffeeroom `v1.14`
 

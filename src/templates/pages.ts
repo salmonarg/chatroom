@@ -5,7 +5,7 @@ export const get404Html = () => `
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>404 - caffeine-Ink</title>
+    <title>404 - Caffeine Ink</title>
     <meta name="theme-color" content="#d8e3ed" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#242931" media="(prefers-color-scheme: dark)">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -40,7 +40,7 @@ export const get404Html = () => `
     <div class="box">
         <div class="content">
           <div class="header">  
-          <span class="title">caffeine-Ink</span>
+          <span class="title">Caffeine Ink</span>
           <span class="date"></span>
           </div>
           <br>
