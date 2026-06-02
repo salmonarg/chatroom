@@ -380,28 +380,38 @@ export class ChatRoom extends DurableObject {
             }
             // escape backslashes and double quotes
             const safeText = data.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-            
+
             const tellraw = `/tellraw @a [{"text": "<", "color": "white"}, {"text": "${userData.username}", "color": "${nameColor}"}, {"text": "> ", "color": "white"}, {"text": "${safeText}", "color": "white"}]`
 
-            // fetch and notify on success
-            fetch(this.env.BRIDGE_URL, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${this.env.BRIDGE_TOKEN}`
-                },
-                body: JSON.stringify({ command: tellraw })
-            }).then(async res => {
-                if (res.ok) {
-                    this.broadcast(JSON.stringify({
-                        type: "bridge_status",
-                        status: "success",
-                        msg_id: msgId
-                    }))
-                    messageObj.is_bridged = true
-                    await this.saveMessage(messageObj)
-                }
-            }).catch(err => console.error("Bridge Error:", (err as Error).message))
+            // decouple bridge fetch from handler CPU time
+            const controller = new AbortController()
+            const timer = setTimeout(() => controller.abort(), 10000)
+
+            this.ctx.waitUntil(
+                fetch(this.env.BRIDGE_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${this.env.BRIDGE_TOKEN}`
+                    },
+                    body: JSON.stringify({ command: tellraw }),
+                    signal: controller.signal
+                }).then(async res => {
+                    clearTimeout(timer)
+                    if (res.ok) {
+                        messageObj.is_bridged = true
+                        await this.saveMessage(messageObj)
+                        this.broadcast(JSON.stringify({
+                            type: "bridge_status",
+                            status: "success",
+                            msg_id: msgId
+                        }))
+                    }
+                }).catch(err => {
+                    clearTimeout(timer)
+                    console.error("Bridge Error:", (err as Error).message)
+                })
+            )
         }
     }
 
