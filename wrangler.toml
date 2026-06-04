@@ -17,3 +17,7 @@ database_id = "fd14d704-f266-41ff-8c40-4b77e6cac0be"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["ChatRoom"]
+
+[observability.logs]
+enabled = true
+invocation_logs = true
