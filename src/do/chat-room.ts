@@ -385,7 +385,7 @@ export class ChatRoom extends DurableObject {
 
             // decouple bridge fetch from handler CPU time
             const controller = new AbortController()
-            const timer = setTimeout(() => controller.abort(), 10000)
+            const timer = setTimeout(() => controller.abort(), 5000)
 
             this.ctx.waitUntil(
                 fetch(this.env.BRIDGE_URL, {
