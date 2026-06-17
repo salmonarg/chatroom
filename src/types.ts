@@ -1,4 +1,4 @@
-import { D1Database, DurableObjectNamespace, KVNamespace, Fetcher } from '@cloudflare/workers-types'
+import { D1Database, DurableObjectNamespace, KVNamespace, Fetcher, R2Bucket } from '@cloudflare/workers-types'
 
 export type Bindings = {
   DB: D1Database
@@ -11,6 +11,7 @@ export type Bindings = {
   ASSETS?: Fetcher
   BRIDGE_URL?: string
   BRIDGE_TOKEN?: string
+  INCIDENT_LOG?: R2Bucket
 }
 
 export type Variables = {

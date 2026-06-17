@@ -409,23 +409,67 @@ export class ChatRoom extends DurableObject {
                     }
                 }).catch(err => {
                     clearTimeout(timer)
+                    const isTimeout = (err as Error).name === "AbortError"
+                    const type = isTimeout ? "bridge_timeout" : "bridge_error"
                     console.error("Bridge Error:", (err as Error).message)
+                    this.ctx.waitUntil(this.logIncident(type, {
+                        room: userData.roomName,
+                        username: userData.username,
+                        uid: userData.uid,
+                        msg_id: msgId,
+                        error: (err as Error).message
+                    }))
                 })
             )
         }
     }
 
     async webSocketClose(ws: any, code: number, reason: string, wasClean: boolean) {
-        // Handle cleanup if needed, DO handles removal automatically
+        if (code !== 1000) {
+            const userData = ws.deserializeAttachment()
+            this.ctx.waitUntil(this.logIncident("ws_close_abnormal", {
+                room: userData?.roomName,
+                username: userData?.username,
+                uid: userData?.uid,
+                code,
+                reason,
+                wasClean
+            }))
+        }
     }
 
     async webSocketError(ws: any, error: any) {
-        // Handle error if needed, DO handles removal automatically
+        const userData = ws.deserializeAttachment()
+        this.ctx.waitUntil(this.logIncident("ws_error", {
+            room: userData?.roomName,
+            username: userData?.username,
+            uid: userData?.uid,
+            error: error?.message ?? String(error)
+        }))
     }
 
     generateMsgId(timestamp = Date.now()) {
         const randomHex = Math.floor(Math.random() * 0xFFFFF).toString(16).padStart(5, '0')
         return `msg-${timestamp}-${randomHex}`
+    }
+
+    // write incident record to R2
+    async logIncident(type: string, data: Record<string, any>) {
+        if (!this.env.INCIDENT_LOG) return
+        try {
+            const now = Date.now()
+            const d = new Date(now)
+            const y = d.getUTCFullYear()
+            const m = String(d.getUTCMonth() + 1).padStart(2, '0')
+            const day = String(d.getUTCDate()).padStart(2, '0')
+            const key = `incidents/${y}/${m}/${day}/${now}-${type}.json`
+            const body = JSON.stringify({ type, occurred_at: now, ...data })
+            await this.env.INCIDENT_LOG.put(key, body, {
+                httpMetadata: { contentType: "application/json" }
+            })
+        } catch (e) {
+            console.error("logIncident failed:", (e as Error).message)
+        }
     }
 
     async saveMessage(messageObj: any) {
