@@ -384,9 +384,6 @@ export class ChatRoom extends DurableObject {
             const tellraw = `/tellraw @a [{"text": "<", "color": "white"}, {"text": "${userData.username}", "color": "${nameColor}"}, {"text": "> ", "color": "white"}, {"text": "${safeText}", "color": "white"}]`
 
             // decouple bridge fetch from handler CPU time
-            const controller = new AbortController()
-            const timer = setTimeout(() => controller.abort(), 5000)
-
             this.ctx.waitUntil(
                 fetch(this.env.BRIDGE_URL, {
                     method: "POST",
@@ -395,9 +392,8 @@ export class ChatRoom extends DurableObject {
                         "Authorization": `Bearer ${this.env.BRIDGE_TOKEN}`
                     },
                     body: JSON.stringify({ command: tellraw }),
-                    signal: controller.signal
+                    signal: AbortSignal.timeout(5000)
                 }).then(async res => {
-                    clearTimeout(timer)
                     if (res.ok) {
                         messageObj.is_bridged = true
                         await this.saveMessage(messageObj)
@@ -408,8 +404,7 @@ export class ChatRoom extends DurableObject {
                         }))
                     }
                 }).catch(err => {
-                    clearTimeout(timer)
-                    const isTimeout = (err as Error).name === "AbortError"
+                    const isTimeout = (err as Error).name === "TimeoutError"
                     const type = isTimeout ? "bridge_timeout" : "bridge_error"
                     console.error("Bridge Error:", (err as Error).message)
                     this.ctx.waitUntil(this.logIncident(type, {
