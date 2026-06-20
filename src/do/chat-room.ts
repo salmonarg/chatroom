@@ -383,39 +383,38 @@ export class ChatRoom extends DurableObject {
 
             const tellraw = `/tellraw @a [{"text": "<", "color": "white"}, {"text": "${userData.username}", "color": "${nameColor}"}, {"text": "> ", "color": "white"}, {"text": "${safeText}", "color": "white"}]`
 
-            // decouple bridge fetch from handler CPU time
-            this.ctx.waitUntil(
-                fetch(this.env.BRIDGE_URL, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${this.env.BRIDGE_TOKEN}`
-                    },
-                    body: JSON.stringify({ command: tellraw }),
-                    signal: AbortSignal.timeout(5000)
-                }).then(async res => {
-                    if (res.ok) {
-                        messageObj.is_bridged = true
-                        await this.saveMessage(messageObj)
-                        this.broadcast(JSON.stringify({
-                            type: "bridge_status",
-                            status: "success",
-                            msg_id: msgId
-                        }))
-                    }
-                }).catch(err => {
-                    const isTimeout = (err as Error).name === "TimeoutError"
-                    const type = isTimeout ? "bridge_timeout" : "bridge_error"
-                    console.error("Bridge Error:", (err as Error).message)
-                    this.ctx.waitUntil(this.logIncident(type, {
-                        room: userData.roomName,
-                        username: userData.username,
-                        uid: userData.uid,
-                        msg_id: msgId,
-                        error: (err as Error).message
+            // fire bridge fetch independently - DO stays alive via active WebSocket connections
+            // only logIncident uses waitUntil (completes instantly), keeping broadcast unblocked
+            fetch(this.env.BRIDGE_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${this.env.BRIDGE_TOKEN}`
+                },
+                body: JSON.stringify({ command: tellraw }),
+                signal: AbortSignal.timeout(5000)
+            }).then(async res => {
+                if (res.ok) {
+                    messageObj.is_bridged = true
+                    await this.saveMessage(messageObj)
+                    this.broadcast(JSON.stringify({
+                        type: "bridge_status",
+                        status: "success",
+                        msg_id: msgId
                     }))
-                })
-            )
+                }
+            }).catch(err => {
+                const isTimeout = (err as Error).name === "TimeoutError"
+                const type = isTimeout ? "bridge_timeout" : "bridge_error"
+                console.error("Bridge Error:", (err as Error).message)
+                this.ctx.waitUntil(this.logIncident(type, {
+                    room: userData.roomName,
+                    username: userData.username,
+                    uid: userData.uid,
+                    msg_id: msgId,
+                    error: (err as Error).message
+                }))
+            })
         }
     }
 
