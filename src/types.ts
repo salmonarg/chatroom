@@ -12,6 +12,7 @@ export type Bindings = {
   BRIDGE_URL?: string
   BRIDGE_TOKEN?: string
   INCIDENT_LOG?: R2Bucket
+  FILE_SHARE?: R2Bucket
 }
 
 export type Variables = {

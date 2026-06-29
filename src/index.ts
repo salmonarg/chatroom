@@ -4,6 +4,7 @@ import { get404Html } from './templates/pages'
 import auth from './routes/auth'
 import user from './routes/user'
 import chat from './routes/chat'
+import files from './routes/files'
 
 // Export Durable Object Class
 export { ChatRoom } from './do/chat-room'
@@ -17,6 +18,7 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 app.route('/', auth)
 app.route('/', user)
 app.route('/', chat)
+app.route('/files', files)
 
 app.get('/*', async (c) => {
   if (c.env.ASSETS) {
