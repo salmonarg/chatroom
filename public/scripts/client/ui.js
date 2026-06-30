@@ -103,6 +103,16 @@ function appendParsedText(container, text) {
                     img.style.marginTop = '8px';
                     img.style.marginBottom = '8px';
                     img.style.borderRadius = '4px';
+                    
+                    img.onload = () => {
+                        if (typeof chatWindow !== 'undefined') {
+                            const isNearBottom = chatWindow.scrollHeight - chatWindow.scrollTop - chatWindow.clientHeight < (img.clientHeight + 100);
+                            if (isNearBottom) {
+                                chatWindow.scrollTop = chatWindow.scrollHeight;
+                            }
+                        }
+                    };
+                    
                     currentContainer.appendChild(img);
                 } else {
                     currentContainer.appendChild(document.createTextNode(decodeHtmlEntities(part)));

@@ -18,7 +18,9 @@ const ROOM_PLACEHOLDERS = {
     "news": "what's happening...",
     "debug": "debug the world...",
     "minecraft": "baked potatoes...",
-    "bulletin": "iteration..."
+    "bulletin": "iteration...",
+    "books": "永遠に女子高生なのさ...",
+    "meshitero": "めしテロ..."
 };
 
 let currentSocket = null;
