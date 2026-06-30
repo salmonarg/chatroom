@@ -305,8 +305,8 @@ auth.post('/api/signup', async (c) => {
             const userEmail = (email && email.trim() !== "") ? email : null
 
             await c.env.DB.batch([
-                c.env.DB.prepare('INSERT INTO users (uid, username, password, email, email_verified, signup_date, original_email) VALUES (?, ?, ?, ?, ?, ?, ?)')
-                    .bind(newUid, username, hashedPassword, userEmail, 0, Date.now(), userEmail),
+                c.env.DB.prepare('INSERT INTO users (uid, username, password, email, email_verified, signup_date, original_email, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+                    .bind(newUid, username, hashedPassword, userEmail, 0, Date.now(), userEmail, 'member'),
                 c.env.DB.prepare('UPDATE invites SET is_used = 1, used_by_uid = ? WHERE code = ?').bind(newUid, inviteCode)
             ])
 
