@@ -91,10 +91,10 @@ export class ChatRoom extends DurableObject {
     async handleSession(socket: any, username: any, role: any, uid: any, roomName: any) {
         this.state.acceptWebSocket(socket)
 
-        if (role === 'user' && roomName !== 'general' && roomName !== 'bulletin') {
+        if (role === 'guest' && roomName !== 'general' && roomName !== 'bulletin') {
             socket.send(JSON.stringify({
                 sender_username: "system",
-                text: "Please email khangai@caffeine.ink to get the member role.",
+                text: "Please email khangai@caffeine.ink to get full access.",
                 timestamp: Date.now()
             }))
             socket.close(1008, "Role restriction")

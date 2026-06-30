@@ -305,8 +305,8 @@ auth.post('/api/signup', async (c) => {
             const userEmail = (email && email.trim() !== "") ? email : null
 
             await c.env.DB.batch([
-                c.env.DB.prepare('INSERT INTO users (uid, username, password, email, email_verified, signup_date, original_email, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-                    .bind(newUid, username, hashedPassword, userEmail, 0, Date.now(), userEmail, 'member'),
+                c.env.DB.prepare('INSERT INTO users (uid, username, password, email, email_verified, signup_date, original_email) VALUES (?, ?, ?, ?, ?, ?, ?)')
+                    .bind(newUid, username, hashedPassword, userEmail, 0, Date.now(), userEmail),
                 c.env.DB.prepare('UPDATE invites SET is_used = 1, used_by_uid = ? WHERE code = ?').bind(newUid, inviteCode)
             ])
 
@@ -403,8 +403,8 @@ auth.get('/auth/verify-registration', async (c) => {
     try {
         const newUid = await generateNextUid(c.env)
         await c.env.DB.batch([
-            c.env.DB.prepare('INSERT INTO users (uid, username, password, email, email_verified, signup_date, original_email) VALUES (?, ?, ?, ?, 1, ?, ?)')
-                .bind(newUid, record.username, record.password_hash, record.email, Date.now(), record.email),
+            c.env.DB.prepare('INSERT INTO users (uid, username, password, email, email_verified, signup_date, original_email, role) VALUES (?, ?, ?, ?, 1, ?, ?, ?)')
+                .bind(newUid, record.username, record.password_hash, record.email, Date.now(), record.email, 'guest'),
             c.env.DB.prepare('DELETE FROM pending_registrations WHERE token = ?').bind(token)
         ])
         return c.html(templates.getRegistrationSuccessHtml(record.username))
