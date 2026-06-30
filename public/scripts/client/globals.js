@@ -10,7 +10,8 @@ const retryButton = document.getElementById('retryButton');
 const reloadButton = document.getElementById('reloadButton');
 
 /* Room Configuration */
-const ROOMS = ["bulletin", "general", "irl", "news", "debug", "minecraft"];
+const ROOMS = ["bulletin", "general", "irl", "news", "books", "music", "meshitero",
+               "debug", "minecraft"];
 const ROOM_PLACEHOLDERS = {
     "general": "input...",
     "irl": "life with gas meter...",

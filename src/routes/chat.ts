@@ -3,7 +3,8 @@ import { Bindings, Variables } from '../types'
 import { authMiddleware } from '../middleware/auth'
 
 const chat = new Hono<{ Bindings: Bindings, Variables: Variables }>()
-const ALLOWED_CHATROOMS = ["bulletin", "general", "irl", "news", "debug", "minecraft"]
+const ALLOWED_CHATROOMS = ["bulletin", "general", "irl", "news", "books",
+                           "music", "meshitero", "debug", "minecraft"]
 
 // Middleware for /api/room routes to check if room exists
 const checkRoom = async (c: any, next: any) => {
