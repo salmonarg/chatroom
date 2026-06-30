@@ -319,6 +319,8 @@ export class ChatRoom extends DurableObject {
                 let helpText = "Commands:<br>"
                 helpText += "/del <msg-id> (soft delete your own message)<br>"
                 helpText += "/save (save chat history in this room)<br>"
+                helpText += "/reset (close all your other connections in this room)<br>"
+
                 helpText += "<br>Typeset:<br>"
                 helpText += "&lt;br&gt; (line break)<br>"
                 helpText += "&lt;b&gt;text&lt;/b&gt; (bold text)<br>"
@@ -332,9 +334,33 @@ export class ChatRoom extends DurableObject {
                     helpText += "/insert <timestamp> <text> (insert a message at specific time)<br>"
                 }
 
+
                 ws.send(JSON.stringify({
                     sender_username: "system",
                     text: helpText,
+                    timestamp: Date.now()
+                }))
+                return
+            }
+
+            if (command === "/reset") {
+                let closedCount = 0
+                this.state.getWebSockets().forEach((session: any) => {
+                    const otherUserData = session.deserializeAttachment()
+                    // If it's the same user but a different connection
+                    if (otherUserData && otherUserData.uid === userData.uid && session !== ws) {
+                        try {
+                            session.close(1000, "Reset by user")
+                            closedCount++
+                        } catch (e) {
+                            // ignore errors on close
+                        }
+                    }
+                })
+
+                ws.send(JSON.stringify({
+                    sender_username: "system",
+                    text: `reset complete. closed ${closedCount} connection(s).`,
                     timestamp: Date.now()
                 }))
                 return

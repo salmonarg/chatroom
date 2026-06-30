@@ -8,7 +8,7 @@
     "deploy": "wrangler deploy"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260219.0",
+    "@cloudflare/workers-types": "^4.20260630.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/cookie": "^0.6.0",
     "@types/qrcode": "^1.5.6",
