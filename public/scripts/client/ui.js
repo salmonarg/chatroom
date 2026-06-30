@@ -36,7 +36,7 @@ function decodeHtmlEntities(text) {
 
 // parse formatting tags safely
 function appendParsedText(container, text) {
-    const regex = /(<br>|<b>|<\/b>|<a\s+href="[^"]*">|<\/a>|<img\s+src="[^"]*">)/gi;
+    const regex = /(<br>|<b>|<\/b>|<a\s+href="[^"]*">|<\/a>|<img\s+src="[^"]*">|<audio\s+src="[^"]*">)/gi;
     const parts = text.split(regex);
     
     let currentContainer = container;
@@ -114,6 +114,140 @@ function appendParsedText(container, text) {
                     };
                     
                     currentContainer.appendChild(img);
+                } else {
+                    currentContainer.appendChild(document.createTextNode(decodeHtmlEntities(part)));
+                }
+            } else if (matchStr.startsWith('<audio ')) {
+                const audioMatch = part.match(/^<audio\s+src="([^"]*)">$/i);
+                if (audioMatch) {
+                    const src = audioMatch[1];
+                    
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'custom-audio-player';
+
+                    const playBtn = document.createElement('button');
+                    playBtn.className = 'audio-play-btn';
+                    playBtn.innerHTML = '▶';
+
+                    const progressContainer = document.createElement('div');
+                    progressContainer.className = 'audio-progress';
+                    const progressBar = document.createElement('div');
+                    progressBar.className = 'audio-progress-bar';
+                    progressContainer.appendChild(progressBar);
+
+                    const timeDisplay = document.createElement('span');
+                    timeDisplay.className = 'audio-time';
+                    timeDisplay.innerText = '0:00 / 0:00';
+
+                    const volWrapper = document.createElement('div');
+                    volWrapper.className = 'audio-vol-wrapper';
+
+                    const volIcon = document.createElement('span');
+                    volIcon.className = 'audio-vol-icon';
+                    volIcon.innerText = '🕪';
+
+                    const volPopup = document.createElement('div');
+                    volPopup.className = 'audio-vol-popup';
+
+                    const volSlider = document.createElement('input');
+                    volSlider.type = 'range';
+                    volSlider.min = '0';
+                    volSlider.max = '1';
+                    volSlider.step = '0.01';
+                    volSlider.value = '1';
+
+                    volPopup.appendChild(volSlider);
+                    volWrapper.appendChild(volIcon);
+                    volWrapper.appendChild(volPopup);
+
+                    const audioEl = document.createElement('audio');
+                    audioEl.src = src;
+                    audioEl.preload = 'metadata';
+                    audioEl.style.display = 'none';
+
+                    wrapper.appendChild(playBtn);
+                    wrapper.appendChild(progressContainer);
+                    wrapper.appendChild(timeDisplay);
+                    wrapper.appendChild(volWrapper);
+                    wrapper.appendChild(audioEl);
+
+                    // format time helper
+                    const formatTime = (time) => {
+                        if (isNaN(time)) return '0:00';
+                        const m = Math.floor(time / 60);
+                        const s = String(Math.floor(time % 60)).padStart(2, '0');
+                        return `${m}:${s}`;
+                    };
+
+                    const updateVolIcon = (vol) => {
+                        if (vol === 0) return '🕨';
+                        if (vol < 0.5) return '🕩';
+                        return '🕪';
+                    };
+
+                    // logic
+                    playBtn.onclick = () => {
+                        if (audioEl.paused) {
+                            audioEl.play();
+                            playBtn.innerHTML = '⏸';
+                        } else {
+                            audioEl.pause();
+                            playBtn.innerHTML = '▶';
+                        }
+                    };
+
+                    volIcon.onclick = () => {
+                        if (audioEl.volume > 0) {
+                            audioEl.dataset.lastVol = audioEl.volume;
+                            audioEl.volume = 0;
+                            volSlider.value = 0;
+                        } else {
+                            const lastVol = parseFloat(audioEl.dataset.lastVol) || 1;
+                            audioEl.volume = lastVol;
+                            volSlider.value = lastVol;
+                        }
+                        volIcon.innerText = updateVolIcon(audioEl.volume);
+                    };
+
+                    volSlider.oninput = (e) => {
+                        audioEl.volume = parseFloat(e.target.value);
+                        volIcon.innerText = updateVolIcon(audioEl.volume);
+                    };
+
+                    audioEl.onended = () => {
+                        playBtn.innerHTML = '▶';
+                        progressBar.style.width = '0%';
+                        timeDisplay.innerText = `0:00 / ${formatTime(audioEl.duration)}`;
+                    };
+
+                    audioEl.ontimeupdate = () => {
+                        if (audioEl.duration) {
+                            const percent = (audioEl.currentTime / audioEl.duration) * 100;
+                            progressBar.style.width = percent + '%';
+                            timeDisplay.innerText = `${formatTime(audioEl.currentTime)} / ${formatTime(audioEl.duration)}`;
+                        }
+                    };
+
+                    audioEl.onloadedmetadata = () => {
+                        timeDisplay.innerText = `0:00 / ${formatTime(audioEl.duration)}`;
+                        if (typeof chatWindow !== 'undefined') {
+                            const isNearBottom = chatWindow.scrollHeight - chatWindow.scrollTop - chatWindow.clientHeight < (wrapper.clientHeight + 100);
+                            if (isNearBottom) {
+                                chatWindow.scrollTop = chatWindow.scrollHeight;
+                            }
+                        }
+                    };
+
+                    progressContainer.onclick = (e) => {
+                        if (audioEl.duration) {
+                            const rect = progressContainer.getBoundingClientRect();
+                            const clickX = e.clientX - rect.left;
+                            const percent = clickX / rect.width;
+                            audioEl.currentTime = percent * audioEl.duration;
+                        }
+                    };
+
+                    currentContainer.appendChild(wrapper);
                 } else {
                     currentContainer.appendChild(document.createTextNode(decodeHtmlEntities(part)));
                 }
