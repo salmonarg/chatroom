@@ -36,7 +36,7 @@ function decodeHtmlEntities(text) {
 
 // parse formatting tags safely
 function appendParsedText(container, text) {
-    const regex = /(<br>|<b>|<\/b>|<a\s+href="[^"]*">|<\/a>)/gi;
+    const regex = /(<br>|<b>|<\/b>|<a\s+href="[^"]*">|<\/a>|<img\s+src="[^"]*">)/gi;
     const parts = text.split(regex);
     
     let currentContainer = container;
@@ -91,6 +91,22 @@ function appendParsedText(container, text) {
                     }
                 }
                 if (!found) currentContainer.appendChild(document.createTextNode(decodeHtmlEntities(part)));
+            } else if (matchStr.startsWith('<img ')) {
+                const imgMatch = part.match(/^<img\s+src="([^"]*)">$/i);
+                if (imgMatch) {
+                    const src = imgMatch[1];
+                    const img = document.createElement('img');
+                    img.src = src;
+                    img.style.maxWidth = '80%';
+                    img.style.height = 'auto';
+                    img.style.display = 'block';
+                    img.style.marginTop = '8px';
+                    img.style.marginBottom = '8px';
+                    img.style.borderRadius = '4px';
+                    currentContainer.appendChild(img);
+                } else {
+                    currentContainer.appendChild(document.createTextNode(decodeHtmlEntities(part)));
+                }
             } else {
                 currentContainer.appendChild(document.createTextNode(decodeHtmlEntities(part)));
             }
