@@ -22,9 +22,6 @@ new_sqlite_classes = ["ChatRoom"]
 enabled = true
 invocation_logs = true
 
-[[r2_buckets]]
-binding = "INCIDENT_LOG"
-bucket_name = "chatroom-incidents"
 
 [[r2_buckets]]
 binding = "FILE_SHARE"
