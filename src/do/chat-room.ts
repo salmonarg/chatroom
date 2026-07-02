@@ -94,7 +94,7 @@ export class ChatRoom extends DurableObject {
         if (role === 'guest' && roomName !== 'general' && roomName !== 'bulletin') {
             socket.send(JSON.stringify({
                 sender_username: "system",
-                text: "Please email khangai@caffeine.ink to get full access.",
+                text: "please email khangai@caffeine.ink to get full access.",
                 timestamp: Date.now()
             }))
             socket.close(1008, "Role restriction")

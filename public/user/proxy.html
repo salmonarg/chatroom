@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>proxy - coffeeroom</title>
+    <meta name="theme-color" content="#c7d6e5" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#191d22" media="(prefers-color-scheme: dark)">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <style>
+        @font-face {
+            font-family: unifont;
+            src: url(/fonts/unifont.otf);
+        }
+
+        :root {
+            --bg-color: #d8e3ed;
+            --chat-bg-color: #e9eff5;
+            --popup-bg-color: rgba(255, 255, 255, 0.5);
+            --border-color: #a2adb9;
+            --comment-color: #808ea1;
+            --note-color: #69727d;
+            --text-color: #444f5d;
+            --highlight-color: #b7c2d0;
+            --pre-code-color: #ced9e3;
+            --button-color: #f4f7f9;
+            --button-hover-color: #ecf1f4;
+            --button-active-color: #dee4e8;
+            --msg-bg-color: #dbe4ed;
+            --auth-bg-color: #c7d6e5;
+            --danger-color: #c94a4a;
+        }
+        [data-theme="dark"] {
+            --bg-color: #242931;
+            --chat-bg-color: #2e3640;
+            --popup-bg-color: rgba(46, 54, 64, 0.5);
+            --border-color: #555c68;
+            --comment-color: #555c68;
+            --note-color: #888e9d;
+            --text-color: #e9f0f5;
+            --highlight-color: #444f5d;
+            --pre-code-color: #2e3640;
+            --button-color: #2e3640;
+            --button-hover-color: #444f5d;
+            --button-active-color: #39424e;
+            --msg-bg-color: #444f5d;
+            --auth-bg-color: #191d22;
+            --danger-color: #d67a85;
+        }
+        [data-theme="mono"] {
+            --bg-color: #ffffff;
+            --chat-bg-color: #ffffff;
+            --popup-bg-color: #ffffff;
+            --border-color: #777777;
+            --comment-color: #777777;
+            --note-color: #777777;
+            --text-color: #000000;
+            --highlight-color: #cccccc;
+            --pre-code-color: #dddddd;
+            --button-color: #ffffff;
+            --button-hover-color: #ffffff;
+            --button-active-color: #eeeeee;
+            --msg-bg-color: #ffffff;
+            --auth-bg-color: #ffffff;
+            --danger-color: #000000;
+        }
+
+        body {
+            background-color: var(--auth-bg-color);
+            color: var(--text-color);
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            box-sizing: border-box;
+            font-family: 'unifont', sans-serif;
+            padding: 20px;
+        }
+
+        html {
+            background-color: var(--auth-bg-color);
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 15px;
+            }
+        }
+
+        a {
+            color: var(--text-color);
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        a:hover {
+            background-color: var(--text-color);
+            color: var(--bg-color);
+        }
+
+        ::selection {
+            background-color: var(--text-color);
+            color: var(--bg-color);
+        }
+
+        .card {
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-color);
+            border-radius: 5px;
+            padding: 20px;
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .inner-box {
+            background: var(--chat-bg-color);
+            border-radius: 3px;
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            margin-bottom: 15px;
+            position: relative;
+        }
+        
+        .inner-box-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .progress-container {
+            height: 6px;
+            background-color: var(--border-color);
+            border-radius: 3px;
+            position: relative;
+            margin-top: 15px;
+            margin-bottom: 5px;
+        }
+
+        .progress-bar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background-color: var(--text-color);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            font-size: 12px;
+            color: var(--comment-color);
+            text-align: right;
+        }
+
+        .btn {
+            font-family: 'unifont', sans-serif;
+            font-size: 14px;
+            color: var(--text-color);
+            background-color: var(--button-color);
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            padding: 3px 10px;
+            text-decoration: none;
+            display: inline-block;
+            cursor: pointer;
+            height: 23px;
+            flex-shrink: 0;
+            box-sizing: border-box;
+            line-height: 1;
+            vertical-align: middle;
+        }
+
+        .btn:hover {
+            background-color: var(--button-hover-color);
+            color: var(--text-color);
+        }
+
+        .btn:active {
+            background-color: var(--button-active-color);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .warning-text {
+            color: var(--danger-color);
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 5px;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--chat-bg-color);
+        }
+
+        .copy-input {
+            width: 100%;
+            font-family: 'unifont', sans-serif;
+            font-size: 12px;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            padding: 4px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+            margin-top: 5px;
+        }
+
+        .cards-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .cards-container .inner-box {
+            margin-bottom: 0;
+        }
+
+        @media (min-width: 500px) {
+            .cards-container {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+    <script>
+        (function() {
+            const savedMode = localStorage.getItem('theme-mode') || 'auto';
+            let isDark = false;
+            let isMono = false;
+            if (savedMode === 'auto') {
+                isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            } else if (savedMode === 'mono') {
+                isMono = true;
+            } else {
+                isDark = (savedMode === 'dark');
+            }
+            if (isDark) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            } else if (isMono) {
+                document.documentElement.setAttribute('data-theme', 'mono');
+            }
+        })();
+    </script>
+</head>
+<body>
+    <div id="app">
+        <div class="card">
+            <div class="card-title">Salmon Network Communications</div>
+            <div style="font-size: 13px; line-height: 1.5; color: var(--text-color);">
+                <p style="margin-top: 0px; margin-bottom: 8px;">Welcome to the proxy service.</p>
+                <p style="margin-top: 0px; margin-bottom: 8px;">Quota:</p>
+                <ul style="padding-left: 20px; margin-bottom: 0; margin-top: 0;">
+                    <li style="margin-bottom: 4px;"><b>Oregon:</b> 40 GB monthly quota. Resets on the 1st of each month.</li>
+                    <li><b>Salmon:</b> 1 GB base quota. Daily check-in grants +128 MB (valid for 30 days). Check-in resets daily at 00:00 UTC.</li>
+                </ul>
+                <p>Download <a href="https://room.caffeine.ink/files/download/flc.apk">FlClash for Android</a>
+                from coffeeroom (if unable to access GitHub).<br>
+                FlClash <a href="https://github.com/chen08209/FlClash/releases/latest">GitHub Release</a>
+                (for Android, Windows NT, Apple macOS, and GNU/Linux).</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Proxy Dashboard</div>
+            <div id="content" style="text-align: center;">Loading...</div>
+        </div>
+    </div>
+
+    <script src="/scripts/theme.js"></script>
+    <script defer src="/scripts/favicon.js"></script>
+    <script>
+        function formatGB(bytes) {
+            return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+        }
+
+        async function fetchProxyData() {
+            try {
+                const res = await fetch('/api/user/proxy');
+                if (res.status === 401) {
+                    window.location.href = '/auth/login';
+                    return;
+                }
+                const data = await res.json();
+                render(data);
+            } catch (e) {
+                document.getElementById('content').textContent = 'Error loading data.';
+            }
+        }
+
+        async function activateProxy() {
+            const btn = document.getElementById('activate-btn');
+            btn.disabled = true;
+            btn.textContent = 'Activating...';
+            try {
+                const res = await fetch('/api/user/proxy/activate', { method: 'POST' });
+                if (res.ok) {
+                    fetchProxyData();
+                } else {
+                    alert('Activation failed.');
+                    btn.disabled = false;
+                    btn.textContent = 'Activate Proxy';
+                }
+            } catch (e) {
+                alert('Error activating proxy.');
+                btn.disabled = false;
+                btn.textContent = 'Activate Proxy';
+            }
+        }
+        
+        async function checkIn() {
+            const btn = document.getElementById('checkin-btn');
+            btn.disabled = true;
+            btn.textContent = 'Checking in...';
+            try {
+                const res = await fetch('/api/user/proxy/checkin', { method: 'POST' });
+                if (res.ok) {
+                    fetchProxyData();
+                } else {
+                    alert('Check-in failed.');
+                    btn.disabled = false;
+                    btn.textContent = 'Check In';
+                }
+            } catch (e) {
+                alert('Error during check-in.');
+                btn.disabled = false;
+                btn.textContent = 'Check In';
+            }
+        }
+
+        async function resetToken() {
+            if (!confirm('Are you sure you want to reset your subscription token? You will need to update your clients.')) return;
+            const btn = document.getElementById('reset-btn');
+            btn.disabled = true;
+            try {
+                const res = await fetch('/api/user/proxy/reset-token', { method: 'POST' });
+                if (res.ok) {
+                    fetchProxyData();
+                } else {
+                    alert('Reset failed.');
+                    btn.disabled = false;
+                }
+            } catch (e) {
+                alert('Error resetting token.');
+                btn.disabled = false;
+            }
+        }
+
+        function render(data) {
+            const content = document.getElementById('content');
+            content.style.textAlign = 'left';
+
+            if (!data.activated) {
+                content.innerHTML = `
+                    <div style="text-align: center;">
+                        <p style="margin-bottom: 20px;">You have not activated the proxy service yet.</p>
+                        <button id="activate-btn" class="btn" onclick="activateProxy()">Activate Proxy</button>
+                    </div>
+                `;
+                return;
+            }
+
+            const proxy = data.my_proxy;
+            const oregonPct = Math.min(100, (proxy.static_used / proxy.static_quota) * 100);
+            const salmonPct = Math.min(100, (proxy.dynamic_used / proxy.dynamic_quota) * 100);
+            
+            const subBase = window.location.origin + '/sub/' + proxy.sub_token;
+            
+            let html = '<div class="cards-container">';
+
+            // Oregon (Static)
+            html += `
+                <div class="inner-box">
+                    <div style="display: flex; justify-content: space-between; align-items: center; min-height: 23px;">
+                        <div class="inner-box-title" style="margin-bottom:0;">Oregon</div>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar" style="width: ${oregonPct}%;"></div>
+                    </div>
+                    <div class="progress-text">${formatGB(proxy.static_used)} / ${formatGB(proxy.static_quota)}</div>
+                    ${proxy.static_is_blocked ? '<div class="warning-text">Quota exceeded. Traffic is blocked.</div>' : ''}
+                </div>
+            `;
+
+            // Salmon (Dynamic)
+            html += `
+                <div class="inner-box">
+                    <div style="display: flex; justify-content: space-between; align-items: center; min-height: 23px;">
+                        <div class="inner-box-title" style="margin-bottom:0;">Salmon</div>
+                        <button id="checkin-btn" class="btn" onclick="checkIn()" ${proxy.has_checked_in_today ? 'disabled' : ''}>
+                            ${proxy.has_checked_in_today ? 'Checked In' : 'Check In (+128 MB)'}
+                        </button>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar" style="width: ${salmonPct}%;"></div>
+                    </div>
+                    <div class="progress-text">${formatGB(proxy.dynamic_used)} / ${formatGB(proxy.dynamic_quota)}</div>
+                    ${proxy.dynamic_is_blocked ? '<div class="warning-text">Quota exceeded. Traffic is blocked.</div>' : ''}
+                </div>
+            `;
+
+            html += '</div>';
+
+            // Subscriptions
+            html += `
+                <div class="inner-box">
+                    <div class="inner-box-title">Subscriptions</div>
+                    
+                    <div style="margin-top: 32px;">Mihomo / Clash:</div>
+                    <input type="text" class="copy-input" value="${subBase}/mihomo" readonly onclick="this.select()">
+                    
+                    <div>Shadowrocket / V2Ray:</div>
+                    <input type="text" class="copy-input" value="${subBase}/shadowrocket" readonly onclick="this.select()">
+                    
+                    <div style="text-align: right; margin-top: 10px;">
+                        <button id="reset-btn" class="btn" onclick="resetToken()">Reset Token</button>
+                    </div>
+                </div>
+            `;
+
+            // Ranking
+            if (data.all_users && data.all_users.length > 0) {
+                html += `
+                    <div class="inner-box" style="padding: 10px;">
+                        <div class="inner-box-title" style="margin-left: 5px;">Usage Ranking</div>
+                        <table>
+                            <tr>
+                                <th>User</th>
+                                <th>Oregon</th>
+                                <th>Salmon</th>
+                            </tr>
+                            ${data.all_users.map(u => `
+                                <tr>
+                                    <td>${u.username}</td>
+                                    <td>${formatGB(u.static_used)} / ${formatGB(u.static_quota)}</td>
+                                    <td>${formatGB(u.dynamic_used)} / ${formatGB(u.dynamic_quota)}</td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    </div>
+                `;
+            }
+
+            // History
+            if (data.history && data.history.length > 0) {
+                html += `
+                    <div class="inner-box" style="padding: 10px;">
+                        <div class="inner-box-title" style="margin-left: 5px;">History</div>
+                        <table>
+                            <tr>
+                                <th>Month</th>
+                                <th>Oregon</th>
+                                <th>Salmon</th>
+                            </tr>
+                            ${data.history.map(h => `
+                                <tr>
+                                    <td>${h.year}-${h.month.toString().padStart(2, '0')}</td>
+                                    <td>${formatGB(h.static_used)}</td>
+                                    <td>${formatGB(h.dynamic_used)}</td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    </div>
+                `;
+            }
+
+            content.innerHTML = html;
+        }
+
+        fetchProxyData();
+    </script>
+</body>
+</html>

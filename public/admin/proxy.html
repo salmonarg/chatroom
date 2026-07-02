@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>proxy admin - coffeeroom</title>
+    <meta name="theme-color" content="#c7d6e5" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#191d22" media="(prefers-color-scheme: dark)">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <style>
+        @font-face {
+            font-family: unifont;
+            src: url(/fonts/unifont.otf);
+        }
+
+        :root {
+            --bg-color: #d8e3ed;
+            --chat-bg-color: #e9eff5;
+            --border-color: #a2adb9;
+            --comment-color: #808ea1;
+            --text-color: #444f5d;
+            --button-color: #f4f7f9;
+            --button-hover-color: #ecf1f4;
+            --button-active-color: #dee4e8;
+            --auth-bg-color: #c7d6e5;
+            --danger-color: #c94a4a;
+        }
+        [data-theme="dark"] {
+            --bg-color: #242931;
+            --chat-bg-color: #2e3640;
+            --border-color: #555c68;
+            --comment-color: #555c68;
+            --text-color: #e9f0f5;
+            --button-color: #2e3640;
+            --button-hover-color: #444f5d;
+            --button-active-color: #39424e;
+            --auth-bg-color: #191d22;
+            --danger-color: #d67a85;
+        }
+        [data-theme="mono"] {
+            --bg-color: #ffffff;
+            --chat-bg-color: #ffffff;
+            --border-color: #777777;
+            --comment-color: #777777;
+            --text-color: #000000;
+            --button-color: #ffffff;
+            --button-hover-color: #ffffff;
+            --button-active-color: #eeeeee;
+            --auth-bg-color: #ffffff;
+            --danger-color: #000000;
+        }
+
+        body {
+            background-color: var(--auth-bg-color);
+            color: var(--text-color);
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            box-sizing: border-box;
+            font-family: 'unifont', sans-serif;
+            padding: 20px;
+        }
+        html { background-color: var(--auth-bg-color); }
+        @media (max-width: 600px) { body { padding: 15px; } }
+
+        .card {
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-color);
+            border-radius: 5px;
+            padding: 20px;
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            background: var(--chat-bg-color);
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--bg-color);
+        }
+
+        .btn {
+            font-family: 'unifont', sans-serif;
+            font-size: 12px;
+            color: var(--text-color);
+            background-color: var(--button-color);
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            padding: 2px 6px;
+            text-decoration: none;
+            display: inline-block;
+            cursor: pointer;
+        }
+        .btn:hover { background-color: var(--button-hover-color); }
+        .btn.danger { color: var(--danger-color); }
+
+        .quota-input {
+            width: 60px;
+            font-family: 'unifont', monospace;
+            background: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            padding: 2px;
+        }
+    </style>
+    <script>
+        (function() {
+            const savedMode = localStorage.getItem('theme-mode') || 'auto';
+            let isDark = false;
+            let isMono = false;
+            if (savedMode === 'auto') {
+                isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            } else if (savedMode === 'mono') {
+                isMono = true;
+            } else {
+                isDark = (savedMode === 'dark');
+            }
+            if (isDark) document.documentElement.setAttribute('data-theme', 'dark');
+            else if (isMono) document.documentElement.setAttribute('data-theme', 'mono');
+        })();
+    </script>
+</head>
+<body>
+    <div class="card">
+        <div class="card-title">Proxy Admin Dashboard</div>
+        <div id="content" style="overflow-x: auto;">Loading...</div>
+    </div>
+
+    <script src="/scripts/theme.js"></script>
+    <script defer src="/scripts/favicon.js"></script>
+    <script>
+        function formatGB(bytes) {
+            return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+        }
+        function parseGB(gbStr) {
+            return Math.floor(parseFloat(gbStr) * 1024 * 1024 * 1024);
+        }
+
+        async function fetchAdminData() {
+            try {
+                const res = await fetch('/api/admin/proxy');
+                if (res.status === 401) {
+                    window.location.href = '/auth/login';
+                    return;
+                }
+                if (res.status === 403) {
+                    document.getElementById('content').innerHTML = '<div style="text-align: center; color: var(--danger-color); padding: 20px;">Access Denied. Administrator privileges required.</div>';
+                    return;
+                }
+                const data = await res.json();
+                render(data.users);
+            } catch (e) {
+                document.getElementById('content').textContent = 'Error loading data.';
+            }
+        }
+
+        async function updateQuota(uid, inputId) {
+            const gbVal = document.getElementById(inputId).value;
+            const bytes = parseGB(gbVal);
+            if (isNaN(bytes)) return alert('Invalid number');
+            
+            try {
+                await fetch('/api/admin/proxy/' + uid, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ static_quota: bytes })
+                });
+                fetchAdminData();
+            } catch (e) { alert('Error updating'); }
+        }
+
+        async function toggleBlock(uid, type, currentBlocked) {
+            const body = {};
+            if (type === 'static') body.static_is_blocked = !currentBlocked;
+            if (type === 'dynamic') body.dynamic_is_blocked = !currentBlocked;
+            
+            try {
+                await fetch('/api/admin/proxy/' + uid, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(body)
+                });
+                fetchAdminData();
+            } catch (e) { alert('Error updating'); }
+        }
+
+        function render(users) {
+            if (!users || users.length === 0) {
+                document.getElementById('content').textContent = 'No users found.';
+                return;
+            }
+
+            let html = `
+                <table>
+                    <tr>
+                        <th>Username</th>
+                        <th>Status</th>
+                        <th>Oregon Quota (GB)</th>
+                        <th>Oregon Used</th>
+                        <th>Oregon Block</th>
+                        <th>Salmon Used</th>
+                        <th>Salmon Block</th>
+                    </tr>
+            `;
+
+            for (const u of users) {
+                const isActivated = !!u.xray_uuid;
+                if (!isActivated) {
+                    html += `<tr><td>${u.username}</td><td colspan="6">Not Activated</td></tr>`;
+                    continue;
+                }
+
+                const sqId = 'sq_' + u.uid;
+                const sqVal = (u.static_quota / (1024**3)).toFixed(1);
+
+                html += `
+                    <tr>
+                        <td>${u.username}</td>
+                        <td>Active</td>
+                        <td>
+                            <input type="number" id="${sqId}" value="${sqVal}" step="0.5" class="quota-input">
+                            <button class="btn" onclick="updateQuota('${u.uid}', '${sqId}')">Set</button>
+                        </td>
+                        <td>${formatGB(u.static_used)}</td>
+                        <td>
+                            <button class="btn ${u.static_is_blocked ? 'danger' : ''}" onclick="toggleBlock('${u.uid}', 'static', ${u.static_is_blocked})">
+                                ${u.static_is_blocked ? 'Unblock' : 'Block'}
+                            </button>
+                        </td>
+                        <td>${formatGB(u.dynamic_used)} / ${formatGB(u.dynamic_quota)}</td>
+                        <td>
+                            <button class="btn ${u.dynamic_is_blocked ? 'danger' : ''}" onclick="toggleBlock('${u.uid}', 'dynamic', ${u.dynamic_is_blocked})">
+                                ${u.dynamic_is_blocked ? 'Unblock' : 'Block'}
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }
+
+            html += `</table>`;
+            document.getElementById('content').innerHTML = html;
+        }
+
+        fetchAdminData();
+    </script>
+</body>
+</html>

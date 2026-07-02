@@ -11,6 +11,9 @@ export type Bindings = {
   ASSETS?: Fetcher
   BRIDGE_URL?: string
   BRIDGE_TOKEN?: string
+  BRIDGE_TOKEN?: string
+  BRIDGE_TOKEN?: string
+  PROXY_INTERNAL_TOKEN: string
   INCIDENT_LOG?: R2Bucket
   FILE_SHARE?: R2Bucket
 }
