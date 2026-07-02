@@ -167,7 +167,12 @@
                     return;
                 }
                 if (res.status === 403) {
-                    document.getElementById('content').innerHTML = '<div style="text-align: center; color: var(--danger-color); padding: 20px;">Access Denied. Administrator privileges required.</div>';
+                    document.getElementById('content').innerHTML = `
+                        <div style="text-align: center;
+                             color: var(--danger-color);
+                            padding: 20px;">
+                            Access Denied. Administrator privileges required.
+                        </div>`;
                     return;
                 }
                 const data = await res.json();
@@ -181,7 +186,7 @@
             const gbVal = document.getElementById(inputId).value;
             const bytes = parseGB(gbVal);
             if (isNaN(bytes)) return alert('Invalid number');
-            
+
             try {
                 await fetch('/api/admin/proxy/' + uid, {
                     method: 'PUT',
@@ -196,7 +201,7 @@
             const body = {};
             if (type === 'static') body.static_is_blocked = !currentBlocked;
             if (type === 'dynamic') body.dynamic_is_blocked = !currentBlocked;
-            
+
             try {
                 await fetch('/api/admin/proxy/' + uid, {
                     method: 'PUT',
@@ -241,18 +246,23 @@
                         <td>${u.username}</td>
                         <td>Active</td>
                         <td>
-                            <input type="number" id="${sqId}" value="${sqVal}" step="0.5" class="quota-input">
-                            <button class="btn" onclick="updateQuota('${u.uid}', '${sqId}')">Set</button>
+                            <input type="number" id="${sqId}" value="${sqVal}"
+                                step="0.5" class="quota-input">
+                            <button class="btn" onclick="updateQuota('${u.uid}', '${sqId}')">
+                                Set
+                            </button>
                         </td>
                         <td>${formatGB(u.static_used)}</td>
                         <td>
-                            <button class="btn ${u.static_is_blocked ? 'danger' : ''}" onclick="toggleBlock('${u.uid}', 'static', ${u.static_is_blocked})">
+                            <button class="btn ${u.static_is_blocked ? 'danger' : ''}"
+                            onclick="toggleBlock('${u.uid}', 'static', ${u.static_is_blocked})">
                                 ${u.static_is_blocked ? 'Unblock' : 'Block'}
                             </button>
                         </td>
                         <td>${formatGB(u.dynamic_used)} / ${formatGB(u.dynamic_quota)}</td>
                         <td>
-                            <button class="btn ${u.dynamic_is_blocked ? 'danger' : ''}" onclick="toggleBlock('${u.uid}', 'dynamic', ${u.dynamic_is_blocked})">
+                            <button class="btn ${u.dynamic_is_blocked ? 'danger' : ''}"
+                            onclick="toggleBlock('${u.uid}', 'dynamic', ${u.dynamic_is_blocked})">
                                 ${u.dynamic_is_blocked ? 'Unblock' : 'Block'}
                             </button>
                         </td>

@@ -18,14 +18,14 @@ CREATE TABLE IF NOT EXISTS proxy_users (
     uid               TEXT PRIMARY KEY,
     xray_uuid         TEXT UNIQUE NOT NULL,
     sub_token         TEXT UNIQUE NOT NULL,
-    
+
     static_quota      INTEGER DEFAULT 42949672960, -- 40GB
     static_used       INTEGER DEFAULT 0,
     static_is_blocked INTEGER DEFAULT 0,
-    
+
     dynamic_used       INTEGER DEFAULT 0,
     dynamic_is_blocked INTEGER DEFAULT 0,
-    
+
     token_created_at  INTEGER NOT NULL,
     updated_at        INTEGER NOT NULL,
     FOREIGN KEY (uid) REFERENCES users(uid)
