@@ -11,7 +11,13 @@ import { User, Session, OatRecord } from '../models'
 
 const user = new Hono<{ Bindings: Bindings, Variables: Variables }>()
 
-user.use('*', authMiddleware)
+user.use('/api/user', authMiddleware)
+user.use('/api/user/change-password', authMiddleware)
+user.use('/api/user/bind-email', authMiddleware)
+user.use('/api/user/unbind-email', authMiddleware)
+user.use('/api/user/2fa/*', authMiddleware)
+user.use('/api/sessions*', authMiddleware)
+user.use('/api/oats*', authMiddleware)
 
 // GET /api/user
 user.get('/api/user', async (c) => {
