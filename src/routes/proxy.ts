@@ -450,8 +450,9 @@ proxy.put('/api/admin/proxy/:uid', authMiddleware, async (c) => {
 
 function requireInternalToken(env: Bindings, req: Request): boolean {
     const auth = req.headers.get('Authorization') ?? ''
-    const token = auth.startsWith('Bearer ') ? auth.slice(7) : ''
-    return token === env.PROXY_INTERNAL_TOKEN
+    const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : ''
+    const expected = (env.PROXY_INTERNAL_TOKEN || '').trim()
+    return token === expected && expected.length > 0
 }
 
 proxy.get('/internal/proxy-config/:nodeId', async (c) => {
