@@ -20,7 +20,7 @@ const ROOM_PLACEHOLDERS = {
     "minecraft": "baked potatoes...",
     "bulletin": "iteration...",
     "books": "永遠に女子高生なのさ...",
-    "meshitero": "めしテロ..."
+    "meshitero": "パスタだけ作れれば..."
 };
 
 let currentSocket = null;
