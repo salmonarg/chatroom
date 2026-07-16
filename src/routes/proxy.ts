@@ -234,7 +234,7 @@ dns:
 
     return c.text(yaml, 200, {
         'Content-Type': 'text/plain; charset=utf-8',
-        'Content-Disposition': 'attachment; filename="Salmon Network Communications.yaml"',
+        'Content-Disposition': 'attachment; filename="Salmon Network Service"',
         'Subscription-Userinfo': `upload=0; download=${row.static_used}; total=${row.static_quota}; expire=0`
     })
 })
