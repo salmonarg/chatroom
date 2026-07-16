@@ -230,8 +230,8 @@ proxy.get('/sub/:token/shadowrocket', async (c) => {
     if (!row) return c.text('Not Found', 404)
 
     const nodes = await c.env.DB.prepare('SELECT * FROM proxy_nodes WHERE is_active = 1').all<ProxyNode>()
-    
-    const uris = nodes.results.map(n => 
+
+    const uris = nodes.results.map(n =>
         `vless://${row.xray_uuid}@${n.server_ip}:${n.server_port}?security=reality&encryption=none&pbk=${n.public_key}&headerType=none&fp=chrome&type=tcp&flow=xtls-rprx-vision&sni=${n.server_name}&sid=${n.short_id}#${encodeURIComponent(n.name)}`
     ).join('\n')
 
@@ -245,9 +245,7 @@ proxy.get('/sub/:token/shadowrocket', async (c) => {
 
 // ─── Authenticated user API ───────────────────────────────────────────────────
 
-proxy.use('/api/user/proxy*', authMiddleware)
-
-proxy.get('/api/user/proxy', async (c) => {
+proxy.get('/api/user/proxy', authMiddleware, async (c) => {
     const me = c.get('user')!
 
     const myRow = await c.env.DB.prepare(
@@ -258,7 +256,7 @@ proxy.get('/api/user/proxy', async (c) => {
 
     let dynamicQuota = 1073741824
     let hasCheckedInToday = false
-    
+
     if (myRow) {
         dynamicQuota = await getDynamicQuota(c.env.DB, me.uid)
         const todayStart = new Date()
@@ -363,11 +361,11 @@ proxy.post('/api/user/proxy/checkin', authMiddleware, async (c) => {
 
     const todayStart = new Date()
     todayStart.setUTCHours(0, 0, 0, 0)
-    
+
     const checkinRow = await c.env.DB.prepare(
         'SELECT 1 FROM proxy_checkins WHERE uid = ? AND created_at >= ? LIMIT 1'
     ).bind(me.uid, todayStart.getTime()).first()
-    
+
     if (checkinRow) {
         return c.json({ success: false, message: 'already checked in today' }, 400)
     }
@@ -381,9 +379,7 @@ proxy.post('/api/user/proxy/checkin', authMiddleware, async (c) => {
 
 // ─── Admin API ────────────────────────────────────────────────────────────────
 
-proxy.use('/api/admin/proxy*', authMiddleware)
-
-proxy.get('/api/admin/proxy', async (c) => {
+proxy.get('/api/admin/proxy', authMiddleware, async (c) => {
     const me = c.get('user')!
     if (me.role !== 'admin') return c.json({ success: false }, 403)
 
@@ -396,7 +392,7 @@ proxy.get('/api/admin/proxy', async (c) => {
          WHERE u.role != 'admin'
          ORDER BY u.username`
     ).all()
-    
+
     const usersWithDynamicQuota = await Promise.all(rows.results.map(async (u: any) => {
         if (u.uid && u.xray_uuid) {
             u.dynamic_quota = await getDynamicQuota(c.env.DB, u.uid)
@@ -463,7 +459,7 @@ proxy.get('/internal/proxy-config/:nodeId', async (c) => {
     if (!node) return c.json({ success: false, message: 'unknown node' }, 404)
 
     const blockedCol = node.type === 'static' ? 'static_is_blocked' : 'dynamic_is_blocked'
-    
+
     const rows = await c.env.DB.prepare(
         `SELECT pu.uid, pu.xray_uuid, pu.${blockedCol} as is_blocked, u.username
          FROM proxy_users pu
@@ -514,7 +510,7 @@ proxy.post('/internal/usage/:nodeId', async (c) => {
         const lastUpdate = new Date(row.updated_at)
         const lastYear = lastUpdate.getUTCFullYear()
         const lastMonth = lastUpdate.getUTCMonth() + 1
-        
+
         let localStaticUsed = row.static_used
         let localDynamicUsed = row.dynamic_used
         let localStaticBlocked = row.static_is_blocked
@@ -535,14 +531,14 @@ proxy.post('/internal/usage/:nodeId', async (c) => {
         }
 
         let isBlockedNow = 0
-        
+
         if (node.type === 'static') {
             localStaticUsed += delta
             isBlockedNow = localStaticUsed >= row.static_quota ? 1 : 0
             await c.env.DB.prepare(
                 'UPDATE proxy_users SET static_used = ?, static_is_blocked = ?, updated_at = ? WHERE uid = ?'
             ).bind(localStaticUsed, isBlockedNow, now, row.uid).run()
-            
+
             if (isBlockedNow && !localStaticBlocked) newlyBlocked.push(report.email)
         } else {
             localDynamicUsed += delta
@@ -551,7 +547,7 @@ proxy.post('/internal/usage/:nodeId', async (c) => {
             await c.env.DB.prepare(
                 'UPDATE proxy_users SET dynamic_used = ?, dynamic_is_blocked = ?, updated_at = ? WHERE uid = ?'
             ).bind(localDynamicUsed, isBlockedNow, now, row.uid).run()
-            
+
             if (isBlockedNow && !localDynamicBlocked) newlyBlocked.push(report.email)
         }
     }

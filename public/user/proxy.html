@@ -312,6 +312,9 @@
                     return;
                 }
                 const data = await res.json();
+                if (!data.success && res.status !== 200) {
+                    throw new Error(data.message || 'API Error');
+                }
                 render(data);
             } catch (e) {
                 document.getElementById('content').textContent = 'Error loading data.';
@@ -359,7 +362,7 @@
         }
 
         async function resetToken() {
-            if (!confirm('Are you sure you want to reset your subscription token? You will need' +
+            if (!confirm('Are you sure you want to reset your subscription token? You will need ' +
                 'to update your clients.')) return;
             const btn = document.getElementById('reset-btn');
             btn.disabled = true;
@@ -384,10 +387,8 @@
             if (!data.activated) {
                 content.innerHTML = `
                     <div style="text-align: center;">
-                        <p style="margin-bottom: 20px;">You have not activated the proxy service
-                yet.</p>
-                        <button id="activate-btn" class="btn" onclick="activateProxy()">Activate
-                Proxy</button>
+                        <p style="margin-bottom: 20px;">You have not activated the proxy service yet.</p>
+                        <button id="activate-btn" class="btn" onclick="activateProxy()">Activate Proxy</button>
                     </div>
                 `;
                 return;
