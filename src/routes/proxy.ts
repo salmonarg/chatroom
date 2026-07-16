@@ -112,6 +112,7 @@ proxy.get('/sub/:token/mihomo', async (c) => {
     port: ${node.server_port}
     uuid: ${row.xray_uuid}
     udp: true
+    packet-encoding: xudp
     tls: true
     flow: xtls-rprx-vision
     servername: ${node.server_name}
@@ -131,6 +132,12 @@ proxy.get('/sub/:token/mihomo', async (c) => {
 ${nodeNamesList}
       - DIRECT
   - name: Claude
+    type: select
+    proxies:
+      - Proxy
+${nodeNamesList}
+      - DIRECT
+  - name: GPT
     type: select
     proxies:
       - Proxy
@@ -166,6 +173,19 @@ rules:
   - IP-CIDR,160.79.104.0/21,Claude,no-resolve
   - IP-CIDR6,2607:6bc0::/32,Claude,no-resolve
   - IP-ASN,399358,Claude,no-resolve
+  # === GPT ===
+  - DOMAIN-SUFFIX,openai.com,GPT
+  - DOMAIN-SUFFIX,chatgpt.com,GPT
+  - DOMAIN-SUFFIX,chat.com,GPT
+  - DOMAIN-SUFFIX,sora.com,GPT
+  - DOMAIN-SUFFIX,oaistatic.com,GPT
+  - DOMAIN-SUFFIX,oaiusercontent.com,GPT
+  - DOMAIN-SUFFIX,crixet.com,GPT
+  - DOMAIN-SUFFIX,client-api.arkoselabs.com,GPT
+  - DOMAIN,openai-api.arkoselabs.com,GPT
+  - DOMAIN-SUFFIX,chatgpt.livekit.cloud,GPT
+  - DOMAIN-SUFFIX,host.livekit.cloud,GPT
+  - DOMAIN-SUFFIX,turn.livekit.cloud,GPT
   # === Others ===
   - GEOIP,private,DIRECT,no-resolve
   - GEOSITE,category-ads-all,AdBlock
