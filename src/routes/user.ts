@@ -11,16 +11,8 @@ import { User, Session, OatRecord } from '../models'
 
 const user = new Hono<{ Bindings: Bindings, Variables: Variables }>()
 
-user.use('/api/user', authMiddleware)
-user.use('/api/user/change-password', authMiddleware)
-user.use('/api/user/bind-email', authMiddleware)
-user.use('/api/user/unbind-email', authMiddleware)
-user.use('/api/user/2fa/*', authMiddleware)
-user.use('/api/sessions*', authMiddleware)
-user.use('/api/oats*', authMiddleware)
-
 // GET /api/user
-user.get('/api/user', async (c) => {
+user.get('/api/user', authMiddleware, async (c) => {
     const payload = c.get('user')!
     
     // fetch latest user data
@@ -36,7 +28,7 @@ user.get('/api/user', async (c) => {
 })
 
 // POST /api/user/change-password
-user.post('/api/user/change-password', async (c) => {
+user.post('/api/user/change-password', authMiddleware, async (c) => {
     try {
         const payload = c.get('user')!
         if (payload.isOatLogin) return c.json({ success: false, message: 'action not permitted via OAT session' }, 403)
@@ -65,7 +57,7 @@ user.post('/api/user/change-password', async (c) => {
 })
 
 // POST /api/user/bind-email
-user.post('/api/user/bind-email', async (c) => {
+user.post('/api/user/bind-email', authMiddleware, async (c) => {
     try {
         const payload = c.get('user')!
         if (payload.isOatLogin) return c.json({ success: false, message: 'action not permitted via OAT session' }, 403)
@@ -104,7 +96,7 @@ user.post('/api/user/bind-email', async (c) => {
 })
 
 // POST /api/user/unbind-email
-user.post('/api/user/unbind-email', async (c) => {
+user.post('/api/user/unbind-email', authMiddleware, async (c) => {
     try {
         const payload = c.get('user')!
         if (payload.isOatLogin) return c.json({ success: false, message: 'action not permitted via OAT session' }, 403)
@@ -130,7 +122,7 @@ user.post('/api/user/unbind-email', async (c) => {
 })
 
 // 2FA Routes
-user.post('/api/user/2fa/setup', async (c) => {
+user.post('/api/user/2fa/setup', authMiddleware, async (c) => {
     const payload = c.get('user')!
     if (payload.isOatLogin) return c.json({ success: false, message: 'action not permitted via OAT session' }, 403)
     
@@ -157,7 +149,7 @@ user.post('/api/user/2fa/setup', async (c) => {
     return c.json({ success: true, secret: secret, qrCode: qrCodeDataUrl })
 })
 
-user.post('/api/user/2fa/enable', async (c) => {
+user.post('/api/user/2fa/enable', authMiddleware, async (c) => {
     const payload = c.get('user')!
     if (payload.isOatLogin) return c.json({ success: false, message: 'action not permitted via OAT session' }, 403)
     
@@ -215,7 +207,7 @@ user.post('/api/user/2fa/enable', async (c) => {
     })
 })
 
-user.post('/api/user/2fa/disable', async (c) => {
+user.post('/api/user/2fa/disable', authMiddleware, async (c) => {
     const payload = c.get('user')!
     if (payload.isOatLogin) return c.json({ success: false, message: 'action not permitted via OAT session' }, 403)
     
@@ -236,7 +228,7 @@ user.post('/api/user/2fa/disable', async (c) => {
 })
 
 // Sessions
-user.get('/api/sessions', async (c) => {
+user.get('/api/sessions', authMiddleware, async (c) => {
     const payload = c.get('user')!
     await c.env.DB.prepare('DELETE FROM sessions WHERE expires_at < ?').bind(Date.now()).run()
 
@@ -250,7 +242,7 @@ user.get('/api/sessions', async (c) => {
     return c.json({ success: true, sessions: results })
 })
 
-user.delete('/api/sessions', async (c) => {
+user.delete('/api/sessions', authMiddleware, async (c) => {
     const payload = c.get('user')!
     if (payload.isOatLogin) return c.json({ success: false, message: 'action not permitted via OAT session' }, 403)
     
@@ -261,7 +253,7 @@ user.delete('/api/sessions', async (c) => {
     return c.json({ success: true })
 })
 
-user.delete('/api/sessions/others', async (c) => {
+user.delete('/api/sessions/others', authMiddleware, async (c) => {
     const payload = c.get('user')!
     if (payload.isOatLogin) return c.json({ success: false, message: 'action not permitted via OAT session' }, 403)
 
@@ -274,13 +266,13 @@ user.delete('/api/sessions/others', async (c) => {
 })
 
 // OATs (Opaque Auth Tickets)
-user.get('/api/oats', async (c) => {
+user.get('/api/oats', authMiddleware, async (c) => {
     const payload = c.get('user')!
     const oats = await c.env.DB.prepare('SELECT id, label, created_at FROM oats WHERE uid = ? ORDER BY created_at DESC').bind(payload.uid).all<OatRecord>()
     return c.json({ success: true, oats: oats.results })
 })
 
-user.post('/api/oats', async (c) => {
+user.post('/api/oats', authMiddleware, async (c) => {
     const payload = c.get('user')!
     const formData = await c.req.parseBody()
     const label = (formData['label'] as string) || 'New OAT'
@@ -299,7 +291,7 @@ user.post('/api/oats', async (c) => {
     return c.json({ success: true, ticket: rawTicket })
 })
 
-user.delete('/api/oats', async (c) => {
+user.delete('/api/oats', authMiddleware, async (c) => {
     const payload = c.get('user')!
     const id = c.req.query('id')
     if (!id) return c.json({ success: false, message: 'missing id' }, 400)
