@@ -12,6 +12,7 @@ export interface ProxyNode {
     public_key: string
     short_id: string
     is_active: number
+    protocol: 'vless-reality' | 'tuic' | null
 }
 
 interface ProxyUser {
@@ -106,6 +107,21 @@ proxy.get('/sub/:token/mihomo', async (c) => {
 
     for (const node of activeNodes) {
         nodeNames.push(node.name)
+        if (node.protocol === 'tuic') {
+            proxiesYaml += `  - name: "${node.name}"
+    type: tuic
+    server: ${node.server_ip}
+    port: ${node.server_port}
+    uuid: ${row.xray_uuid}
+    password: ${row.xray_uuid}
+    sni: ${node.server_name}
+    skip-cert-verify: true
+    alpn:
+      - h3
+    udp-relay-mode: native
+    congestion-controller: bbr\n`
+            continue
+        }
         proxiesYaml += `  - name: "${node.name}"
     type: vless
     server: ${node.server_ip}
@@ -252,7 +268,9 @@ proxy.get('/sub/:token/shadowrocket', async (c) => {
     const nodes = await c.env.DB.prepare('SELECT * FROM proxy_nodes WHERE is_active = 1').all<ProxyNode>()
 
     const uris = nodes.results.map(n =>
-        `vless://${row.xray_uuid}@${n.server_ip}:${n.server_port}?security=reality&encryption=none&pbk=${n.public_key}&headerType=none&fp=chrome&type=tcp&flow=xtls-rprx-vision&sni=${n.server_name}&sid=${n.short_id}#${encodeURIComponent(n.name)}`
+        n.protocol === 'tuic'
+            ? `tuic://${row.xray_uuid}:${row.xray_uuid}@${n.server_ip}:${n.server_port}?sni=${n.server_name}&congestion_control=bbr&udp_relay_mode=native&alpn=h3&allow_insecure=1#${encodeURIComponent(n.name)}`
+            : `vless://${row.xray_uuid}@${n.server_ip}:${n.server_port}?security=reality&encryption=none&pbk=${n.public_key}&headerType=none&fp=chrome&type=tcp&flow=xtls-rprx-vision&sni=${n.server_name}&sid=${n.short_id}#${encodeURIComponent(n.name)}`
     ).join('\n')
 
     const base64Str = btoa(uris)
