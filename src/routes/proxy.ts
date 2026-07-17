@@ -270,15 +270,16 @@ proxy.get('/sub/:token/shadowrocket', async (c) => {
     const uris = nodes.results.map(n =>
         n.protocol === 'tuic'
             ? `tuic://${row.xray_uuid}:${row.xray_uuid}@${n.server_ip}:${n.server_port}?sni=${n.server_name}&congestion_control=bbr&udp_relay_mode=native&alpn=h3&allow_insecure=1#${encodeURIComponent(n.name)}`
-            : `vless://${row.xray_uuid}@${n.server_ip}:${n.server_port}?security=reality&encryption=none&pbk=${n.public_key}&headerType=none&fp=chrome&type=tcp&flow=xtls-rprx-vision&sni=${n.server_name}&sid=${n.short_id}&udp=xudp#${encodeURIComponent(n.name)}`
-    ).join('\n')
+            : `vless://${row.xray_uuid}@${n.server_ip}:${n.server_port}?security=reality&encryption=none&pbk=${n.public_key}&headerType=none&fp=chrome&type=tcp&flow=xtls-rprx-vision&sni=${n.server_name}&sid=${n.short_id}&udp=3#${encodeURIComponent(n.name)}`
+    )
 
-    const base64Str = btoa(uris)
+    // REMARKS=xxx line is Shadowrocket's convention for naming the
+    // subscription; it lives inside the base64-encoded body, not headers.
+    const body = ['REMARKS=Salmon Network Service', ...uris].join('\n')
+    const base64Str = btoa(body)
 
     return c.text(base64Str, 200, {
         'Content-Type': 'text/plain; charset=utf-8',
-        'Content-Disposition': 'attachment; filename="Salmon Network Service"',
-        'Profile-Title': 'Salmon Network Service',
         'Subscription-Userinfo': `upload=0; download=${row.static_used}; total=${row.static_quota}; expire=0`
     })
 })
