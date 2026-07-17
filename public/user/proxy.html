@@ -229,7 +229,7 @@
             padding: 4px;
             box-sizing: border-box;
             margin-bottom: 10px;
-            margin-top: 5px;
+            margin-top: 10px;
         }
 
         .cards-container {
@@ -452,17 +452,18 @@
                     <input type="text" class="copy-input" value="${subBase}/mihomo" readonly
                         onclick="this.select()">
                     <div>Shadowrocket:</div>
-                    <input type="text" class="copy-input" value="${subBase}/shadowrocket" readonly
-                        onclick="this.select()">
-                    <div style="margin-top: 10px;">
+                    <div style="display: flex; gap: 8px; align-items: center; margin-top: 10px; margin-bottom: 10px;">
+                        <input type="text" class="copy-input"
+                            style="margin: 0; flex: 1; min-width: 0;"
+                            value="${subBase}/shadowrocket" readonly
+                            onclick="this.select()">
                         <a href="sub://${btoa(subBase + '/shadowrocket')}"
-                            class="btn" style="margin-right: 8px;">Import to Shadowrocket</a>
+                            class="btn">Import</a>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 40px;">
                         <a href="shadowrocket://color?NavigationBarColor=%231F1F1F&NavigationBar2Color=%23000000&NavigationBarTextColor=%23FFFFFF&NavigationBar2TextColor=%23FFFFFF&TabBarColor=%231F1F1F&TabBarBorderColor=%2300000000&TabBarSelectedColor=%2395B6DD&TabBarUnselectedColor=%23B3B3B3&TableBackgroundColor=%23000000&TableCellBackgroundColor=%231A1A1A&TableCellSelectedBackgroundColor=%23404040&TableSeparatorColor=%23333333&TextFieldTextColor=%23CCCCCC&PlaceholderColor=%23CCCCCC&TextLabelTextColor=%23FFFFFF&DetailLabelTextColor=%23CCCCCC&TextLabelDeleteColor=%23D67A85&HeaderFooterTextColor=%23808080&SearchFieldBackgroundColor=%23333333&IndicatorColor=%23FFFFFF&ButtonIconColor=%2395B6DD&ButtonNormalColor=%23FFFFFF&ButtonNormal2Color=%23CCFFFFFF&ButtonNormal3Color=%23808080&ButtonHighlightedColor=%2399FFFFFF&ButtonHighlighted2Color=%23FFFFFF&ButtonHighlighted3Color=%23000000&ButtonDisabledColor=%2380FFFFFF&ButtonDisabled2Color=%2380FFFFFF&PingSuccessTextColor=%23A7D3A6&PingTimeoutTextColor=%23D67A85&DefaultDotColor=%23DFD39E&HUDBackgroundColor=%231F1F1F&v=1.0"
                             class="btn">Colors for Shadowrocket</a>
-                    </div>
-                    <div style="text-align: right; margin-top: 10px;">
-                        <button id="reset-btn" class="btn" onclick="resetToken()">Reset
-                            Token</button>
+                        <button id="reset-btn" class="btn" onclick="resetToken()">Reset Token</button>
                     </div>
                 </div>
             `;
