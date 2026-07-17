@@ -454,6 +454,12 @@
                     <div>Shadowrocket:</div>
                     <input type="text" class="copy-input" value="${subBase}/shadowrocket" readonly
                         onclick="this.select()">
+                    <div style="margin-top: 10px;">
+                        <a href="shadowrocket://add/sub/${btoa(subBase + '/shadowrocket')}?remark=${encodeURIComponent('Salmon Network Service')}"
+                            class="btn" style="margin-right: 8px;">Import to Shadowrocket</a>
+                        <a href="sub://${btoa(subBase + '/shadowrocket')}"
+                            class="btn">sub://</a>
+                    </div>
                     <div style="text-align: right; margin-top: 10px;">
                         <button id="reset-btn" class="btn" onclick="resetToken()">Reset
                             Token</button>
